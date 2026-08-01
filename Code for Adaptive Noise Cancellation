@@ -1,0 +1,81 @@
+clc;
+clear all;
+close all;
+
+Fs = 16000;                
+t = (0:1/Fs:2)'
+
+speech = sin(2*pi*300*t) + 0.5*sin(2*pi*600*t);
+
+noise = randn(size(t));
+
+noisySpeech = speech + 0.5 * noise;
+
+filterOrder = 32;  
+mu = 0.01;        
+nSamples = length(noisySpeech);
+
+h = zeros(filterOrder,1);  
+x = zeros(filterOrder,1); 
+errorSignal = zeros(nSamples,1);
+
+for n = 1:nSamples
+    x = [noise(n); x(1:end-1)];              
+    y_hat = h' * x;                          
+    errorSignal(n) = noisySpeech(n) - y_hat;
+    h = h + mu * errorSignal(n) * x;         
+end
+
+filteredSpeech = errorSignal;
+
+speech = speech / max(abs(speech));
+noisySpeech = noisySpeech / max(abs(noisySpeech));
+filteredSpeech = filteredSpeech / max(abs(filteredSpeech));
+
+timeAxis = (0:nSamples-1)/Fs;
+
+figure;
+subplot(3,1,1);
+plot(timeAxis, noisySpeech);
+title('Noisy Speech');
+xlabel('Time (s)'); ylabel('Amplitude');
+
+subplot(3,1,2);
+plot(timeAxis, filteredSpeech);
+title('Filtered Speech (After LMS)');
+xlabel('Time (s)'); ylabel('Amplitude');
+
+subplot(3,1,3);
+plot(timeAxis, speech);
+title('Original Clean Speech');
+xlabel('Time (s)'); ylabel('Amplitude');
+
+figure;
+subplot(3,1,1);
+spectrogram(speech, 256, 128, 256, Fs, 'yaxis');
+title('Original Clean Speech Spectrogram');
+
+subplot(3,1,2);
+spectrogram(noisySpeech, 256, 128, 256, Fs, 'yaxis');
+title('Noisy Speech Spectrogram');
+
+subplot(3,1,3);
+spectrogram(filteredSpeech, 256, 128, 256, Fs, 'yaxis');
+title('Filtered Speech Spectrogram');
+
+disp('Playing original clean speech...');
+sound(speech, Fs);
+pause(length(speech)/Fs + 1);
+
+disp('Playing noisy speech...');
+sound(noisySpeech, Fs);
+pause(length(noisySpeech)/Fs + 1);
+
+disp('Playing filtered speech...');
+sound(filteredSpeech, Fs);
+
+audiowrite('Original_Clean_Speech.wav', speech, Fs);
+audiowrite('Noisy_Speech.wav', noisySpeech, Fs);
+audiowrite('Filtered_Speech_LMS.wav', filteredSpeech, Fs);
+
+disp('Audio files saved without clipping warnings.');
